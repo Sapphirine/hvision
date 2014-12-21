@@ -54,10 +54,9 @@ public class FindFaces extends Configured implements Tool
             {
                 boolean isRaw = metadata.has("type") && metadata.get("type").equals("raw");
                 IplImage image;
-                String modelPath = uriPaths[0].getPath();
                 FaceDetection detector = new FaceDetection();
 
-                detector.setModel(modelPath);
+                detector.setModel("faceModelFile");
                 if (isRaw)
                 {
                     int width = metadata.getAsInt("width");
@@ -149,7 +148,9 @@ public class FindFaces extends Configured implements Tool
         FileOutputFormat.setOutputPath(job, new Path(parser.get("o")));
 
         // Add the model XML file to the distributed cache.
-        job.addCacheFile(new URI(parser.get("m")));
+        // Use symbolic link "faceModelFile" to support different platform formats
+        // and protocols.
+        job.addCacheFile(new URI(parser.get("m") + "#faceModelFile"));
 
         boolean ret = job.waitForCompletion(true);
         return ret ? 0 : 1;
