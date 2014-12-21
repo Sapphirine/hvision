@@ -16,8 +16,8 @@ HVision uses maven build system, Java version 1.7 and OpenCV, so make sure you i
 
 To build HVision clone the depot or download the zip file from GitHub into your machine, and run the following:
 
-    maven package -Dplatform.dependencies=true
-    maven install -Dplatform.dependencies=true
+    mvn package -Dplatform.dependencies=true
+    mvn install -Dplatform.dependencies=true
 
 Setting "platform.dependencies" is important to download JavaCV native dependencies.
 
@@ -41,11 +41,11 @@ Create a thumbnails from a database of images stored in a sequence file:
 
 Given a folder of images and number of cluster, generate the corresponding BOW cluster XML file.
 
-    hvision bowtrainer -i <input path to folder of images> -o <output path for model file> -c <number of cluster>
+    ./bin/hvision bowtrainer -i <input path to folder of images> -o <output path for model file> -c <number of cluster>
 
 Given a folder of labeled images (label is the folder name), generate an HVision sequence file with the label information in the metadata. 
     
-    hvision iseqlab -i <input path to folder of images> -o <output path for sequence file> [-raw]
+    ./bin/hvision iseqlab -i <input path to folder of images> -o <output path for sequence file> [-raw]
 
 ###Mappers only jobs
 
