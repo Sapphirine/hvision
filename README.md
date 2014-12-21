@@ -19,11 +19,29 @@ To build HVision clone the depot or download the zip file from GitHub into your 
     mvn package -Dplatform.dependencies=true
     mvn install -Dplatform.dependencies=true
 
-Setting "platform.dependencies" is important to download JavaCV native dependencies.
+Setting "platform.dependencies" is extremely important in order to download JavaCV native dependencies.
+
+####Build against specific Hadoop Version
+By default, HVision build against Apache Hadoop 2.5.0, to change the version number. You can do it from command line or by updating the pom.xml file. Here the list of properties that control all the version information.
+
+        <!-- Version information for HVision dependencies -->
+        <java.version>1.7</java.version>
+        <java.targetVersion>1.7</java.targetVersion>
+        <junit.version>4.8.2</junit.version>
+        <javacv.version>0.9</javacv.version>
+        <javacpp.version>0.9</javacpp.version>
+        <hadoop.version>2.5.0</hadoop.version>
+        <mavenCompilerPlugin.version>3.1</mavenCompilerPlugin.version>
+        <guava.version>14.0</guava.version>
 
 Running HVision
 ---------------
-To run most algorithms from the command line there is a bash script called "hvision" in the bin folder, that takes command as first arguments and the arguments of the command next. So let's run a number of examples:
+To run most algorithms from the command line there is a bash script called "hvision" in the bin folder, that takes command as first arguments and the arguments of the command next. For this bash file to run on Hadoop, you will need to set the below environment variables:
+
+    HADOOP_PREFIX set it to the root of your Hadoop folder.
+    HADOOP_CONF_DIR set it to Hadoop folder that contains its configuration files.
+
+Now, let's run a number of examples:
 
 ###Tools
 
@@ -91,3 +109,9 @@ Given an HVision sequence file of labeled images and a BOW cluster file, return 
 
     ./bin/hvision icbowtrain -i <input path of the sequence file> -cf <BOW cluster file> -o <output path for the result> [-c <cluster count>]
 
+###Set Hadoop arguments
+To change Hadoop parameters such as the number of reducers, you need to specify the argument immediately after the command and before the command arguments. The reason behind that is a limitation of Hadoop general parser.
+
+The below call image search with 2 reducers:
+
+    ./bin/hvision imagesearch -Dmapreduce.job.reduces=2 -i <input path of the sequence file> -q <query image> -o <output path for the result> [-m <hist or surf>]
