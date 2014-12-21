@@ -12,7 +12,7 @@ For example, put the below line in your .bash_profile file:
 
 Build HVision
 -------------
-HVision uses maven build system, Java version 1.7 and OpenCV, so make sure you install them first. And offcourse you will need Hadoop if you plan to run HVision on Hadoop, for local mode you don't need Hadoop. 
+HVision uses maven build system, Java version 1.7 and OpenCV (tested on OpenCV 2.4.9), so make sure you install them first. And offcourse you will need Hadoop if you plan to run HVision on Hadoop, for local mode you don't need Hadoop. 
 
 To build HVision clone the depot or download the zip file from GitHub into your machine, and run the following:
 
@@ -115,3 +115,31 @@ To change Hadoop parameters such as the number of reducers, you need to specify 
 The below call image search with 2 reducers:
 
     ./bin/hvision imagesearch -Dmapreduce.job.reduces=2 -i <input path of the sequence file> -q <query image> -o <output path for the result> [-m <hist or surf>]
+
+###Amazon AMI
+In order to make it easy to run on Amazon cluster, we add "nhvision" bash file that take exactly the same arguments as "hvision". The main difference is that in nhvision, it will copy all the native OpenCV libraries (so files) into the distributed cache. So you don't need to ssh into each cluster machine and install OpenCV. However, you will need to at least install OpenCV on the master machine, and update the below lines in "nhvision":
+
+    OPENCV_VER=2.4.9
+    NATIVE_LIB_FOLDER=/usr/local/lib
+    NATIVE_LIB_FILES=${NATIVE_LIB_FOLDER}/cv2.so#cv2.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_calib3d.so.${OPENCV_VER}#libopencv_calib3d.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_gpu.so.${OPENCV_VER}#libopencv_gpu.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_nonfree.so.${OPENCV_VER}#libopencv_nonfree.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_superres.so.${OPENCV_VER}#libopencv_superres.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_contrib.so.${OPENCV_VER}#libopencv_contrib.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_highgui.so.${OPENCV_VER}#libopencv_highgui.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_objdetect.so.${OPENCV_VER}#libopencv_objdetect.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_video.so.${OPENCV_VER}#libopencv_video.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_core.so.${OPENCV_VER}#libopencv_core.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_imgproc.so.${OPENCV_VER}#libopencv_imgproc.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_ocl.so.${OPENCV_VER}#libopencv_ocl.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_videostab.so.${OPENCV_VER}#libopencv_videostab.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_features2d.so.${OPENCV_VER}#libopencv_features2d.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_legacy.so.${OPENCV_VER}#libopencv_legacy.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_photo.so.${OPENCV_VER}#libopencv_photo.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_flann.so.${OPENCV_VER}#libopencv_flann.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_ml.so.${OPENCV_VER}#libopencv_ml.so;
+    NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_stitching.so.${OPENCV_VER}#libopencv_stitching.so;
+
+Just make sure that the above point to the right location of your OpenCV binaries.
+    

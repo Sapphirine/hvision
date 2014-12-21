@@ -1,0 +1,226 @@
+#!/bin/bash
+#
+# HVision command script
+#
+# Environment Variables (based on Mahout script)
+#
+#   HVISION_JAVA_HOME  The java implementation to use.  Overrides JAVA_HOME.
+#
+#   HVISION_HEAPSIZE   The maximum amount of heap to use, in MB.
+#                      Default is 1000.
+#
+#   HADOOP_CONF_DIR    The location of a hadoop config directory
+#
+#   HVISION_LOCAL      set to anything other than an empty string to force
+#                      hvision to run locally even if
+#                      HADOOP_CONF_DIR and HADOOP_HOME are set
+#
+
+#
+#/**
+# * Licensed to the Apache Software Foundation (ASF) under one or more
+# * contributor license agreements.  See the NOTICE file distributed with
+# * this work for additional information regarding copyright ownership.
+# * The ASF licenses this file to You under the Apache License, Version 2.0
+# * (the "License"); you may not use this file except in compliance with
+# * the License.  You may obtain a copy of the License at
+# *
+# *     http://www.apache.org/licenses/LICENSE-2.0
+# *
+# * Unless required by applicable law or agreed to in writing, software
+# * distributed under the License is distributed on an "AS IS" BASIS,
+# * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# * See the License for the specific language governing permissions and
+# * limitations under the License.
+# */
+
+cygwin=false
+case "`uname`" in
+CYGWIN*) cygwin=true;;
+esac
+
+# resolve links - $0 may be a softlink
+THIS="$0"
+while [ -h "$THIS" ]; do
+  ls=`ls -ld "$THIS"`
+  link=`expr "$ls" : '.*-> \(.*\)$'`
+  if expr "$link" : '.*/.*' > /dev/null; then
+    THIS="$link"
+  else
+    THIS=`dirname "$THIS"`/"$link"
+  fi
+done
+
+# some directories
+THIS_DIR=`dirname "$THIS"`
+HVISION_HOME=`cd "$THIS_DIR/.." ; pwd`
+
+# some Java parameters
+if [ "$HVISION_JAVA_HOME" != "" ]; then
+  #echo "run java in $HVISION_JAVA_HOME"
+  JAVA_HOME=$HVISION_JAVA_HOME
+fi
+
+if [ "$JAVA_HOME" = "" ]; then
+  echo "Error: JAVA_HOME is not set."
+  exit 1
+fi
+
+JAVA=$JAVA_HOME/bin/java
+JAVA_HEAP_MAX=-Xmx3g
+
+# check envvars which might override default args
+if [ "$HVISION_HEAPSIZE" != "" ]; then
+  #echo "run with heapsize $HVISION_HEAPSIZE"
+  JAVA_HEAP_MAX="-Xmx""$HVISION_HEAPSIZE""m"
+  #echo $JAVA_HEAP_MAX
+fi
+
+if [ $1 = "iseq" ] || [ $1 = "idump" ] || [ $1 = "isrdump" ] || [ $1 = "bowtrainer" ] || [ $1 = "iseqlab" ] || [ $1 = "svmdump" ] ; then
+  echo "Override HVISION_LOCAL, this command run local only."
+  HVISION_LOCAL="local"
+fi
+
+if [ "$HVISION_LOCAL" != "" ]; then
+  echo "HVISION_LOCAL is set, so we don't add HADOOP_CONF_DIR to classpath."
+elif [ -n "$HADOOP_CONF_DIR"  ] ; then
+  echo "HVISION_LOCAL is not set; adding HADOOP_CONF_DIR to classpath."
+  CLASSPATH=${CLASSPATH}:$HADOOP_CONF_DIR
+fi
+
+CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
+
+# so that filenames w/ spaces are handled correctly in loops below
+IFS=
+
+# add release dependencies to CLASSPATH
+for f in $HVISION_HOME/core/target/hvision-*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# add third party dependencies to CLASSPATH, this
+# CLASSPATH will be used in local mode only.
+for f in $HVISION_HOME/core/target/dep/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# add third party dependencies to LIBJARS
+# all the jars in LIBJARS will be distributed in Hadoop
+# cache.
+for f in $HVISION_HOME/core/target/dep/javacv-*.jar; do
+  LIBJARS=$f;
+done
+
+for f in $HVISION_HOME/core/target/dep/opencv-*.jar; do
+  LIBJARS=${LIBJARS},$f;
+done
+
+for f in $HVISION_HOME/core/target/dep/javacpp-*.jar; do
+  LIBJARS=${LIBJARS},$f;
+done
+
+for f in $HVISION_HOME/core/target/dep/libfreenect-*.jar; do
+  LIBJARS=${LIBJARS},$f;
+done
+
+# add native OpenCV libraries, the below need to be updated
+# based on your OS, OpenCV location, and OpenCV version.
+# the below will create a symbolic link to each of the opencv
+# library in order for JavaCV to load it up.
+
+OPENCV_VER=2.4.9
+NATIVE_LIB_FOLDER=/usr/local/lib
+NATIVE_LIB_FILES=${NATIVE_LIB_FOLDER}/cv2.so#cv2.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_calib3d.so.${OPENCV_VER}#libopencv_calib3d.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_gpu.so.${OPENCV_VER}#libopencv_gpu.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_nonfree.so.${OPENCV_VER}#libopencv_nonfree.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_superres.so.${OPENCV_VER}#libopencv_superres.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_contrib.so.${OPENCV_VER}#libopencv_contrib.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_highgui.so.${OPENCV_VER}#libopencv_highgui.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_objdetect.so.${OPENCV_VER}#libopencv_objdetect.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_video.so.${OPENCV_VER}#libopencv_video.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_core.so.${OPENCV_VER}#libopencv_core.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_imgproc.so.${OPENCV_VER}#libopencv_imgproc.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_ocl.so.${OPENCV_VER}#libopencv_ocl.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_videostab.so.${OPENCV_VER}#libopencv_videostab.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_features2d.so.${OPENCV_VER}#libopencv_features2d.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_legacy.so.${OPENCV_VER}#libopencv_legacy.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_photo.so.${OPENCV_VER}#libopencv_photo.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_flann.so.${OPENCV_VER}#libopencv_flann.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_ml.so.${OPENCV_VER}#libopencv_ml.so;
+NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_stitching.so.${OPENCV_VER}#libopencv_stitching.so;
+
+# echo ${NATIVE_LIB_FILES}
+
+# cygwin path translation
+if $cygwin; then
+  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+fi
+
+# restore ordinary behaviour
+unset IFS
+
+# log directory & file
+HVISION_LOG_DIR="$HVISION_HOME/logs"
+HVISION_LOG_FILE='hvision.log'
+
+#Fix log path under cygwin
+if $cygwin; then
+  HVISION_LOG_DIR=`cygpath -p -w "$HVISION_LOG_DIR"`
+fi
+
+HVISION_OPTS="$HVISION_OPTS -Dhadoop.log.dir=$HVISION_LOG_DIR"
+HVISION_OPTS="$HVISION_OPTS -Dhadoop.log.file=$HVISION_LOG_FILE"
+
+if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
+  HVISION_OPTS="$HVISION_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
+fi
+
+CLASS=com.emadbarsoum.driver.HVisionDriver
+
+for f in $HVISION_HOME/core/target/hvision-*.jar; do
+  if [ -e "$f" ]; then
+    HVISION_JOB=$f
+  fi
+done
+
+# run it
+
+HADOOP_BINARY=$(PATH="${HADOOP_HOME:-${HADOOP_PREFIX}}/bin:$PATH" which hadoop 2>/dev/null)
+if [ -x "$HADOOP_BINARY" ] ; then
+  HADOOP_BINARY_CLASSPATH=$("$HADOOP_BINARY" classpath)
+fi
+
+if [ ! -x "$HADOOP_BINARY" ] || [ "$HVISION_LOCAL" != "" ] ; then
+  if [ ! -x "$HADOOP_BINARY" ] ; then
+    echo "hadoop binary is not in PATH,HADOOP_HOME/bin,HADOOP_PREFIX/bin, running locally"
+  elif [ "$HVISION_LOCAL" != "" ] ; then
+    echo "HVISION_LOCAL is set, running locally"
+  fi
+    case $1 in
+    (classpath)
+      echo $CLASSPATH
+      ;;
+    (*)
+      exec "$JAVA" $JAVA_HEAP_MAX $HVISION_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+    esac
+else
+  echo "Running on hadoop, using $HADOOP_BINARY and HADOOP_CONF_DIR=$HADOOP_CONF_DIR"
+
+  if [ "$HVISION_JOB" = "" ] ; then
+    echo "ERROR: Could not find hvision-*.jar in $HVISION_HOME/core/target/hvision-*.jar, please run 'mvn install' to create the hvision-*.jar file"
+    exit 1
+  else
+    case "$1" in
+    (classpath)
+      echo $CLASSPATH
+      ;;
+    (*)
+      export HADOOP_CLASSPATH=${HADOOP_CLASSPATH}
+
+      CMD=$1
+      shift
+      exec "$HADOOP_BINARY" jar $HVISION_JOB $CLASS $CMD -libjars ${LIBJARS} -files ${NATIVE_LIB_FILES} "$@"
+    esac
+  fi
+fi
