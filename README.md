@@ -1,6 +1,6 @@
 HVision
 =======
-Hadoop Vision (HVision) is a vision based platform on the top of Apache Hadoop MapReduce. It exposes a lot of Computer Vision and image processing algorithms from the command line or Java program. All mappers and MapReducers can be run locally or on Hadoop cluster.
+Hadoop Vision (HVision) is a vision based platform on the top of Apache Hadoop MapReduce. It exposes a lot of Computer Vision and image processing algorithms from the command line or Java program. All mappers and MapReducers can run locally or on Hadoop cluster.
 
 Run HVision local
 -----------------
@@ -12,7 +12,7 @@ For example, put the below line in your .bash_profile file:
 
 Build HVision
 -------------
-HVision uses maven build system, Java version 1.7 and OpenCV (tested on OpenCV 2.4.9), so make sure you install them first. And offcourse you will need Hadoop if you plan to run HVision on Hadoop, for local mode you don't need Hadoop. 
+HVision uses maven build system, Java version 1.7 and OpenCV (tested on OpenCV 2.4.9), so make sure you install them first. And off-course you will need Hadoop if you plan to run HVision on Hadoop, for local mode you don't need Hadoop. 
 
 To build HVision clone the depot or download the zip file from GitHub into your machine, and run the following:
 
@@ -21,9 +21,11 @@ To build HVision clone the depot or download the zip file from GitHub into your 
 
 Setting "platform.dependencies" is extremely important in order to download JavaCV native dependencies.
 
-####Build against specific Hadoop Version
+###Build against specific Hadoop Version
 By default, HVision build against Apache Hadoop 2.5.0, to change the version number. You can do it from command line or by updating the pom.xml file. Here the list of properties that control all the version information.
 
+```xml
+    <properties>
         <!-- Version information for HVision dependencies -->
         <java.version>1.7</java.version>
         <java.targetVersion>1.7</java.targetVersion>
@@ -33,6 +35,8 @@ By default, HVision build against Apache Hadoop 2.5.0, to change the version num
         <hadoop.version>2.5.0</hadoop.version>
         <mavenCompilerPlugin.version>3.1</mavenCompilerPlugin.version>
         <guava.version>14.0</guava.version>
+    </properties>
+```
 
 Running HVision
 ---------------
@@ -41,9 +45,13 @@ To run most algorithms from the command line there is a bash script called "hvis
     HADOOP_PREFIX set it to the root of your Hadoop folder.
     HADOOP_CONF_DIR set it to Hadoop folder that contains its configuration files.
 
+This bash script handle all HVision managed dependencies by properly set "-libjars", there is another bash script "nhvision" similar to "hvision" but in addition it handles native OpenCV dependencies, by using "-files" argument. You will need to update "nhvision" in order to know where are you OpenCV binaries. I needed "nhvision" in order to run HVision on Amazon EMR cluster, because you can ssh only the master node.
+
 Now, let's run a number of examples:
 
 ###Tools
+
+All the tool commands are command line utilities and don't run on Hadoop.
 
 Convert a folder of images into HVision compatible sequence file:
 
@@ -142,4 +150,89 @@ In order to make it easy to run on Amazon cluster, we add "nhvision" bash file t
     NATIVE_LIB_FILES=${NATIVE_LIB_FILES},${NATIVE_LIB_FOLDER}/libopencv_stitching.so.${OPENCV_VER}#libopencv_stitching.so;
 
 Just make sure that the above point to the right location of your OpenCV binaries.
-    
+
+Use HVision API
+---------------
+
+All HVision modules are in hvision-core-XXX.jar jar file, were XXX is the version number. Also, HVision depend heavily on [JavaCV](https://github.com/bytedeco/javacv).
+
+Here a small app that iterate through all the contents of HVision Sequence file using ImageSequenceFileReader API.
+
+```java
+import com.emadbarsoum.common.CommandParser;
+import com.emadbarsoum.lib.ImageSequenceFileReader;
+import org.apache.hadoop.conf.Configuration;
+
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+
+import static org.bytedeco.javacpp.opencv_core.*;
+import static org.bytedeco.javacpp.opencv_highgui.*;
+
+public class ReadHVisionSequenceFile
+{
+    public static void main(String[] args) throws Exception
+    {
+        CommandParser parser = new CommandParser(args);
+        if (!parser.parse()                 ||
+            (parser.getNumberOfArgs() != 2) ||
+            !(parser.has("i") && parser.has("o")))
+        {
+            showUsage();
+            System.exit(2);
+        }
+
+        Configuration conf = new Configuration();
+        conf.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem");
+
+        File inputFile = new File(parser.get("i"));
+
+        ImageSequenceFileReader reader = new ImageSequenceFileReader(conf);
+
+        reader.open(inputFile.getAbsolutePath());
+
+        while (reader.next())
+        {
+            String outputPath = parser.get("o") + "/" + reader.name() + "." + reader.originalExt();
+            CvMat imageMat = cvEncodeImage("." + reader.originalExt(), reader.image());
+
+            // Write the result...
+            byte[] data = new byte[imageMat.size()];
+            imageMat.getByteBuffer().get(data);
+
+            DataOutputStream out = new DataOutputStream(new FileOutputStream(outputPath));
+            out.write(data, 0, data.length);
+            out.close();
+
+            cvReleaseMat(imageMat);
+        }
+
+        reader.close();
+    }
+
+    private static void showUsage()
+    {
+        System.out.println("Usage: ReadHVisionSequenceFile -i <input path to sequence file> -o <output folder>");
+    }
+}
+```
+
+And here how to submit a job through Java API (There are multiple way to submit a job, the below is one of them).
+
+```java
+    public static void main(String[] args) throws Exception
+    {
+        String[] nonOptional = {"i", "o", "q"};
+        CommandParser parser = new CommandParser(args);
+        if (!parser.parse()                ||
+            (parser.getNumberOfArgs() < 3) ||
+            !parser.has(nonOptional))
+        {
+            showUsage();
+            System.exit(2);
+        }
+
+        ToolRunner.run(new Configuration(), new ImageSearch(), args);
+    }
+```
