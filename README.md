@@ -2,8 +2,8 @@ HVision
 =======
 Hadoop Vision (HVision) is a vision based platform on the top of Apache Hadoop MapReduce. It exposes a lot of Computer Vision and image processing algorithms from the command line or Java program. All mappers and MapReducers can run locally or on Hadoop cluster.
 
-Run HVision local
------------------
+Run HVision locally
+-------------------
 Inspired by Mahout to run HVision local, you need to set HVISION_LOCAL to any value in your environment variables or in your ".bash_profile" file.
 
 For example, put the below line in your .bash_profile file:
