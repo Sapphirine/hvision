@@ -45,7 +45,7 @@ To run most algorithms from the command line there is a bash script called "hvis
     HADOOP_PREFIX set it to the root of your Hadoop folder.
     HADOOP_CONF_DIR set it to Hadoop folder that contains its configuration files.
 
-This bash script handle all HVision managed dependencies by properly set "-libjars", there is another bash script "nhvision" similar to "hvision" but in addition it handles native OpenCV dependencies, by using "-files" argument. You will need to update "nhvision" in order to know where are you OpenCV binaries. I needed "nhvision" in order to run HVision on Amazon EMR cluster, because you can ssh only the master node.
+This bash script handle all HVision managed dependencies by properly set "-libjars", there is another bash script "nhvision" similar to "hvision" but it handles native OpenCV dependencies, by using "-files" argument. You will need to update "nhvision" in order for it to know where are your OpenCV binaries. I needed "nhvision" in order to run HVision on Amazon EMR cluster, because you can ssh only to the master node.
 
 Now, let's run a number of examples:
 
